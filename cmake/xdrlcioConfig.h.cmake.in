@@ -1,0 +1,15 @@
+#ifndef xdrlcioConfig_H
+#define xdrlcioConfig_H
+
+// version macros
+#define xdrlcio_MAJOR_VERSION @xdrlcio_VERSION_MAJOR@
+#define xdrlcio_MINOR_VERSION @xdrlcio_VERSION_MINOR@
+#define xdrlcio_PATCH_LEVEL @xdrlcio_VERSION_PATCH@
+
+#define xdrlcio_VERSION_STR "@xdrlcio_VERSION_MAJOR@.@xdrlcio_VERSION_MINOR@.@xdrlcio_VERSION_PATCH@"
+
+#define xdrlcio_VERSION_GE( MAJV , MINV , PLEV )  \
+     ( (xdrlcio_MAJOR_VERSION > MAJV) || ( (xdrlcio_MAJOR_VERSION == MAJV) && (xdrlcio_MINOR_VERSION > MINV) ) \
+  || ( (xdrlcio_MAJOR_VERSION == MAJV) && (xdrlcio_MINOR_VERSION == MINV) && (xdrlcio_PATCH_LEVEL >= PLEV) ) )
+
+#endif // xdrlcioConfig_H
