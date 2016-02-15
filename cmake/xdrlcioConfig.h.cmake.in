@@ -8,6 +8,11 @@
 
 #define xdrlcio_VERSION_STR "@xdrlcio_VERSION_MAJOR@.@xdrlcio_VERSION_MINOR@.@xdrlcio_VERSION_PATCH@"
 
+#define xdrlcio_VERSION_ENCODE( major, minor ) ( ( (major) << 16 ) + (minor) )
+#define xdrlcio_VERSION_MAJOR( version ) ( (version) & 0xffff0000 >> 16 )
+#define xdrlcio_VERSION_MINOR( version ) ( (version) & 0x0000ffff )
+#define xdrlcio_VERSION xdrlcio_VERSION_ENCODE( xdrlcio_MAJOR_VERSION , xdrlcio_MINOR_VERSION )
+
 #define xdrlcio_VERSION_GE( MAJV , MINV , PLEV )  \
      ( (xdrlcio_MAJOR_VERSION > MAJV) || ( (xdrlcio_MAJOR_VERSION == MAJV) && (xdrlcio_MINOR_VERSION > MINV) ) \
   || ( (xdrlcio_MAJOR_VERSION == MAJV) && (xdrlcio_MINOR_VERSION == MINV) && (xdrlcio_PATCH_LEVEL >= PLEV) ) )
