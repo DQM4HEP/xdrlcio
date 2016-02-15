@@ -3,8 +3,6 @@
 
 ## INSTALL:
 
-The package is completely standalone.
-
 Requires :
 * [lcio](lcio.desy.de) (major version > 2).
 * [xdrstream](https://github.com/rete/xdrstream).
