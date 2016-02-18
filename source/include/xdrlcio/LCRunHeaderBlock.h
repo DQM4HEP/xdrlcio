@@ -40,10 +40,12 @@ namespace xdrlcio
 {
 
 class LCRunHeaderBlock;
+class XdrLcio;
 
 class XdrLCRunHeader : public IOIMPL::LCRunHeaderIOImpl
 {
 	friend class LCRunHeaderBlock;
+	friend class XdrLcio;
 };
 
 /** 
