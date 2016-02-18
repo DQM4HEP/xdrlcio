@@ -47,7 +47,7 @@ xdrstream::Status LCObjectHandler::init(xdrstream::IODevice *pDevice, xdrstream:
     {
     	m_lcFlag = pLCCollection->getFlag();
 
-    	XDR_STREAM( pDevice->read(&m_lcFlag) )
+    	XDR_STREAM( pDevice->write(&m_lcFlag) )
     	XDR_STREAM( LCParametersHandler::write( pDevice, pLCCollection->parameters() ) )
 
 		m_version = version;
