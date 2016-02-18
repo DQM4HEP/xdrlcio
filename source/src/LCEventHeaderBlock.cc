@@ -150,7 +150,7 @@ xdrstream::Status LCEventHeaderBlock::stream(xdrstream::StreamingMode mode, xdrs
 				XDR_STREAM( pDevice->write( &collectionType ) )
 			}
 
-			XDR_STREAM( LCParametersHandler::write( pDevice , (*m_pLCEventPtr)->parameters() ) )
+			XDR_STREAM( LCParametersHandler::write( pDevice , m_pLCEvent->getParameters() ) )
 		}
 	}
 
