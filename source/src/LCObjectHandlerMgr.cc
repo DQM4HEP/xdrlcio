@@ -31,6 +31,7 @@
 
 // -- xdrlcio handler headers
 #include "xdrlcio/ClusterHandler.h"
+#include "xdrlcio/CaloHitHandler.h"
 
 // -- lcio headers
 #include "EVENT/LCIO.h"
@@ -41,6 +42,7 @@ namespace xdrlcio
 LCObjectHandlerMgr::LCObjectHandlerMgr() 
 {
 	m_objectHandlerMap[EVENT::LCIO::CLUSTER] = new ClusterHandler();
+	m_objectHandlerMap[EVENT::LCIO::CALORIMETERHIT] = new CaloHitHandler();
 }
 
 //----------------------------------------------------------------------------------------------------
