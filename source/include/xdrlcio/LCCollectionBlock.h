@@ -38,6 +38,7 @@ namespace xdrlcio
 {
 
 class LCObjectHandler;
+class XdrLCEvent;
 
 /** 
  *  @brief  LCCollectionBlock class
@@ -74,12 +75,12 @@ public:
 	/**
 	 *  @brief  Set the event ptr to fill the collection with
 	 */
-	void setEventPtr(IOIMPL::LCEventIOImpl **pLCEventPtr);
+	void setEventPtr(XdrLCEvent **pLCEventPtr);
 
 protected:
 	std::string                             m_type;
 	const EVENT::LCCollection              *m_pLCCollection;
-	IOIMPL::LCEventIOImpl                 **m_pLCEventPtr;
+	XdrLCEvent                            **m_pLCEventPtr;
 	LCObjectHandler                        *m_pLCObjectHandler;
 }; 
 

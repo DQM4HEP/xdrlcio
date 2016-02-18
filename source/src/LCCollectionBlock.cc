@@ -28,6 +28,7 @@
 
 #include "xdrlcio/LCCollectionBlock.h"
 #include "xdrlcio/LCObjectHandler.h"
+#include "xdrlcio/LCEventHeaderBlock.h"
 #include "xdrlcioConfig.h"
 
 #include "IOIMPL/LCCollectionIOVec.h"
@@ -56,7 +57,7 @@ void LCCollectionBlock::setCollection(const EVENT::LCCollection *pLCCollection)
 	m_pLCCollection = pLCCollection;
 }
 
-void LCCollectionBlock::setEventPtr(IOIMPL::LCEventIOImpl **pLCEventPtr)
+void LCCollectionBlock::setEventPtr(XdrLCEvent **pLCEventPtr)
 {
 	m_pLCEventPtr = pLCEventPtr;
 }
