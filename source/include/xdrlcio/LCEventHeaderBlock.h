@@ -38,10 +38,12 @@ namespace xdrlcio
 {
 
 class LCEventHeaderBlock;
+class XdrLcio;
 
 class XdrLCEvent : public IOIMPL::LCEventIOImpl
 {
 	friend class LCEventHeaderBlock;
+	friend class XdrLcio;
 };
 
 /** 
