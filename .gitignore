@@ -1,0 +1,6 @@
+/build/
+/include/
+/lib/
+/xdrlcioConfig.cmake
+/xdrlcioConfigVersion.cmake
+/bin/
