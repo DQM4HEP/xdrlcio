@@ -11,6 +11,16 @@ SET( ${PROJECT_NAME}_VERSION_MAJOR 1 )
 SET( ${PROJECT_NAME}_VERSION_MINOR 0 )
 SET( ${PROJECT_NAME}_VERSION_PATCH 0 )
 
+MACRO( BUILD_TEST _testname )
+	ADD_EXECUTABLE( ${_testname} source/tests/${_testname}.cc )
+	TARGET_LINK_LIBRARIES( ${_testname} ${PROJECT_NAME} )
+
+	INSTALL( 
+	    TARGETS ${_testname}
+	    RUNTIME DESTINATION bin/tests
+	)
+ENDMACRO()
+
 # --------------- dependencies -----------
 LIST( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake )
 
@@ -18,6 +28,7 @@ LIST( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake )
 INCLUDE( default_settings )
 
 OPTION( INSTALL_DOC "Whether to build Doxygen documentation" OFF )
+OPTION( BUILD_TESTS "Whether to build tests" OFF )
 
 IF( INSTALL_DOC )
 	ADD_SUBDIRECTORY( doc )	
@@ -56,6 +67,10 @@ INSTALL(
 )
 
 INSTALL( DIRECTORY source/include DESTINATION . PATTERN *.h )
+
+IF( BUILD_TESTS )
+	BUILD_TEST( xdrlcio_test_calohit )
+ENDIF()
 
 ###############################
 # display some variables and write them to cache
