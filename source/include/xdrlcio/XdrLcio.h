@@ -29,8 +29,15 @@
 #ifndef XDRLCIO_H
 #define XDRLCIO_H
 
+// -- xdrstream headers
 #include "xdrstream/xdrstream.h"
 
+// -- xdrlcio headers
+#include "xdrlcio/LCEventHeaderBlock.h"
+#include "xdrlcio/LCRunHeaderBlock.h"
+#include "xdrlcio/LCObjectHandlerMgr.h"
+
+// -- lcio headers
 #include "EVENT/LCEvent.h"
 #include "EVENT/LCRunHeader.h"
 #include "IO/LCEventListener.h"
@@ -40,7 +47,39 @@ namespace xdrlcio
 {
 
 /** 
- * @brief XdrLcio class
+ * @brief XdrLcio class.
+ *
+ *        Main interface to stream in/out LCEvents and LCRunHeaders using xdrstream interface.
+ *
+ *        Note that all operations need an opened xdrstream device, with correct opening mode (read and/or write).
+ *        Write example :
+ *
+ *        \code
+ *        	xdrstream::BufferDevice device(5*1024*1024); // 5 Mo buffer opened in write mode
+ *        	xdrlcio::XdrLcio xdrLcio; // main interface instance;
+ *
+ *        	EVENT::LCEvent *pLCEvent = new EVENT::LCEvent();
+ *        	// ...  Fill your event ...
+ *        	xdrstream::Status status = xdrLcio.writeEvent(pLCEvent, &device); // see xdrstream for status enum
+ *        \endcode
+ *
+ *        Read example from an external buffer :
+ *        \code
+ *        	xdrstream::BufferDevice device(pBuffer, bufferSize, false); // false for no buffer copy
+ *        	device.setOwner(false);
+ *
+ *        	xdrlcio::XdrLcio xdrLcio;
+ *        	// read next event from buffer device
+ *        	xdrstream::Status status = xdrLcio.readNextEvent(&device);
+ *
+ *			// get the event pointer
+ *        	EVENT::LCEvent *pLCEvent = device.getLCEvent();
+ *
+ *        	// ... or get the pointer and the ownership
+ *        	EVENT::LCEvent *pLCEvent = device.takeLCEvent();
+ *        	//... do something and ...
+ *        	delete pLCEvent;
+ *        \endcode
  */ 
 class XdrLcio 
 {
@@ -56,65 +95,131 @@ public:
 	~XdrLcio();
 
 	/**
-	 *  @brief
+	 *  @brief  Write the event in the device
+	 *
+	 *  @param  pLCEvent the event to write
+	 *  @param  pDevice the device to write the event in
 	 */
-	xdrstream::Status writeEvent(const EVENT::LCEvent *const pLCEvent, xdrstream::IODevice *const pDevice);
+	xdrstream::Status writeEvent(const EVENT::LCEvent * pLCEvent, xdrstream::IODevice *const pDevice);
 
 	/**
-	 *  @brief
+	 *  @brief  Read the next found event in the device.
+	 *          The event can be accessed via XdrLcio::getEvent() or
+	 *          XdrLcio::takeEvent()
+	 *
+	 *  @param  pDevice the device to read the event from
 	 */
-	xdrstream::Status readNextEvent(EVENT::LCEvent *&pEvent, xdrstream::IODevice *const pDevice);
+	xdrstream::Status readNextEvent(xdrstream::IODevice *const pDevice);
 
 	/**
-	 *  @brief
+	 *  @brief  Skip n events from the current device position. Non event
+	 *          record are also skippe during this process.
+	 *
+	 *  @param  pDevice the device to skip event from
+	 *  @param  nSkipEvents the number of events to skip
 	 */
-	xdrstream::Status skipNEvents(unsigned int nSKipEvents);
+	xdrstream::Status skipNEvents(xdrstream::IODevice *const pDevice, unsigned int nSKipEvents);
 
 	/**
-	 *  @brief
+	 *  @brief  Read completely the device until the end. Listeners are notified
+	 *          each time an event or a run header is found. To register event and
+	 *          run listeners, use XdrLcio::addLCEventListener(l) and
+	 *          XdrLcio::addLCRunListener(l)
+	 *
+	 *  @param  pDevice the device to read the records from
 	 */
 	xdrstream::Status readDevice(xdrstream::IODevice *const pDevice);
 
 	/**
-	 *  @brief
+	 *  @brief  Read the device until nMaxEvent are read. Listeners are notified
+	 *          each time an event or a run header is found. To register event and
+	 *          run listeners, use XdrLcio::addLCEventListener(l) and
+	 *          XdrLcio::addLCRunListener(l)
+	 *
+	 *  @param  pDevice the device to read the records from
+	 *  @param  nMaxEvents the maximum number of events to read
 	 */
 	xdrstream::Status readDevice(xdrstream::IODevice *const pDevice, unsigned int nMaxEvent);
 
 	/**
-	 *  @brief
+	 *  @brief  Add an event listener. Will be notified each time an event
+	 *          is read from the device. Note that the ownership of the listener
+	 *          is not transfered to the XdrLcio instance
+	 *
+	 *  @param  pListener the listener to add
 	 */
 	void addLCEventListener(IO::LCEventListener *pListener);
 
 	/**
-	 *  @brief
+	 *  @brief  Remove the event listener.
+	 *
+	 *  @param  pListener the listener to remove
 	 */
 	void removeLCEventListener(IO::LCEventListener *pListener);
 
 	/**
-	 *  @brief
+	 *  @brief  Add a run listener. Will be notified each time a run
+	 *          is read from the device. Note that the ownership of the listener
+	 *          is not transfered to the XdrLcio instance
+	 *
+	 *  @param  pListener the listener to add
 	 */
 	void addLCRunListener(IO::LCRunListener *pListener);
 
 	/**
-	 *  @brief
+	 *  @brief  Remove the run listener.
+	 *
+	 *  @param  pListener the listener to remove
 	 */
 	void removeLCRunListener(IO::LCRunListener *pListener);
 
 	/**
-	 *  @brief
+	 *  @brief  Get the xdr stream instance, managing the read/write operations
 	 */
 	xdrstream::XdrStream *getXdrStream() const;
 
 	/**
-	 *  @brief
+	 *  @brief  Create a basic xdr stream instance with the needed records
+	 *          to stream lcio classes
 	 */
 	static xdrstream::XdrStream *createBaseXdrStream();
 
-protected:
+	/**
+	 *  @brief  Get the last read event.
+	 *          Note that the XdrLcio instance owns the event
+	 */
+	EVENT::LCEvent *getLCEvent() const;
 
+	/**
+	 *  @brief  Get the last read event.
+	 *          Ownership of the event transfered to the caller.
+	 *          Internally the event pointer is set to 0
+	 */
+	EVENT::LCEvent *takeLCEvent();
+
+private:
+	/**
+	 *  @brief  Set up event block before writing
+	 */
+	xdrstream::Status setUpBlocks(const EVENT::LCEvent * pLCEvent);
+
+	/**
+	 *  @brief  Set up event block before reading
+	 */
+	xdrstream::Status setUpBlocks();
+
+private:
 	xdrstream::XdrStream                  *m_pXdrStream;
 	std::set<IO::LCEventListener *>        m_eventListeners;
 	std::set<IO::LCRunListener *>          m_runListeners;
+
+	LCEventHeaderBlock                    *m_pLCEventHeaderBlock;
+	LCRunHeaderBlock                      *m_pLCRunHeaderBlock;
+
+	LCObjectHandlerMgr                    *m_pLCObjectHandlerMgr;
+
+	XdrLCEvent                             *m_pXdrLCEvent;
+	XdrLCRunHeader                         *m_pXdrLCRunHeader;
 }; 
 
 } 

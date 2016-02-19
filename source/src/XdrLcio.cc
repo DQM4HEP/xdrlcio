@@ -28,18 +28,374 @@
 
 #include "xdrlcio/XdrLcio.h"
 
-namespace xdrlcio {
+#include "xdrlcio/LCCollectionBlock.h"
 
-XdrLcio::XdrLcio() 
+namespace xdrlcio
 {
 
+XdrLcio::XdrLcio() :
+		m_pXdrLCEvent(0),
+		m_pXdrLCRunHeader(0)
+{
+	m_pXdrStream = XdrLcio::createBaseXdrStream();
+
+	m_pLCEventHeaderBlock = new LCEventHeaderBlock( m_pXdrStream , "EventHeaderBlock" );
+	m_pLCEventHeaderBlock->setEventPtr( & m_pXdrLCEvent );
+	m_pXdrStream->getRecord("EventHeaderRecord")->connectBlock( m_pLCEventHeaderBlock->getName() );
+
+	m_pLCRunHeaderBlock = new LCRunHeaderBlock( m_pXdrStream , "RunHeaderBlock" );
+	m_pLCRunHeaderBlock->setRunHeaderPtr( & m_pXdrLCRunHeader );
+	m_pXdrStream->getRecord("RunHeaderRecord")->connectBlock( m_pLCRunHeaderBlock->getName() );
+
+	m_pLCObjectHandlerMgr = new LCObjectHandlerMgr();
 }
+
+//----------------------------------------------------------------------------------------------------
 
 XdrLcio::~XdrLcio() 
 {
+	delete m_pXdrStream;
+	delete m_pLCObjectHandlerMgr;
 
+	if( m_pXdrLCEvent )
+		delete m_pXdrLCEvent;
+
+	if( m_pXdrLCRunHeader )
+		delete m_pXdrLCRunHeader;
 }
 
+//----------------------------------------------------------------------------------------------------
+
+xdrstream::Status XdrLcio::writeEvent(const EVENT::LCEvent * pLCEvent, xdrstream::IODevice *const pDevice)
+{
+	// check parameters
+	if( ! pLCEvent || ! pDevice )
+		return xdrstream::XDR_INVALID_PARAMETER;
+
+	// is it writable ?
+	if( ! pDevice->isWritable() )
+		return xdrstream::XDR_INVALID_PARAMETER;
+
+	// is the device opened ?
+	if( ! pDevice->isOpened() )
+		return xdrstream::XDR_INVALID_PARAMETER;
+
+	// prepare for writing
+	XDR_STREAM( this->setUpBlocks( pLCEvent ) )
+
+	// write the event header record
+	m_pLCEventHeaderBlock->setEvent( pLCEvent );
+	XDR_STREAM( m_pXdrStream->writeRecord( "EventHeaderRecord" , pDevice ) )
+
+	// write the event record
+	XDR_STREAM( m_pXdrStream->writeRecord( "EventRecord" , pDevice ) )
+
+	return xdrstream::XDR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+xdrstream::Status XdrLcio::readNextEvent( xdrstream::IODevice *const pDevice )
+{
+	// check parameters
+	if( ! pDevice )
+		return xdrstream::XDR_INVALID_PARAMETER;
+
+	// is it readable ?
+	if( ! pDevice->isReadable() )
+		return xdrstream::XDR_INVALID_PARAMETER;
+
+	// is the device opened ?
+	if( ! pDevice->isOpened() )
+		return xdrstream::XDR_INVALID_PARAMETER;
+
+	// first we need to upack the event header record
+	xdrstream::Record *pDummyRecord = NULL;
+	XDR_STREAM( m_pXdrStream->readRecord( "EventHeaderRecord", pDummyRecord , pDevice ) )
+
+	// prepare for reading
+	XDR_STREAM( this->setUpBlocks() )
+
+	pDummyRecord = NULL;
+	XDR_STREAM( m_pXdrStream->readRecord( pDummyRecord , pDevice ) )
+
+	// necessary check ?
+	if( pDummyRecord->getName() != "EventRecord" )
+		return xdrstream::XDR_IO_ERROR;
+
+	return xdrstream::XDR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+xdrstream::Status XdrLcio::skipNEvents(xdrstream::IODevice *const pDevice, unsigned int nSkipEvents)
+{
+	// check parameters
+	if( ! pDevice )
+		return xdrstream::XDR_INVALID_PARAMETER;
+
+	// is it readable ?
+	if( ! pDevice->isReadable() )
+		return xdrstream::XDR_INVALID_PARAMETER;
+
+	// is the device opened ?
+	if( ! pDevice->isOpened() )
+		return xdrstream::XDR_INVALID_PARAMETER;
+
+	unsigned int nSkippedEvents = 0;
+
+	while(1)
+	{
+		// go to next event header record
+		XDR_STREAM( m_pXdrStream->skipRecordsUntill( "EventHeaderRecord" , pDevice ) )
+
+		// skip the two next records : event header record and event record
+		XDR_STREAM( m_pXdrStream->skipNextRecord( pDevice ) )
+		XDR_STREAM( m_pXdrStream->skipNextRecord( pDevice ) )
+
+		nSkippedEvents ++;
+
+		if( nSkipEvents == nSkippedEvents )
+			break;
+	}
+
+	return xdrstream::XDR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+xdrstream::Status XdrLcio::readDevice(xdrstream::IODevice *const pDevice)
+{
+	return this->readDevice( pDevice , 0 );
+}
+
+//----------------------------------------------------------------------------------------------------
+
+xdrstream::Status XdrLcio::readDevice( xdrstream::IODevice *const pDevice , unsigned int nMaxEvents )
+{
+	unsigned int nReadEvents = 0;
+	xdrstream::Record *pDummyRecord = NULL;
+
+	while(1)
+	{
+		// check parameters
+		if( ! pDevice )
+			return xdrstream::XDR_INVALID_PARAMETER;
+
+		// is it readable ?
+		if( ! pDevice->isReadable() )
+			return xdrstream::XDR_INVALID_PARAMETER;
+
+		// is the device opened ?
+		if( ! pDevice->isOpened() )
+			return xdrstream::XDR_INVALID_PARAMETER;
+
+		pDummyRecord = NULL;
+		xdrstream::Status status = m_pXdrStream->readRecord( pDummyRecord , pDevice );
+
+		// in case we reach the end of device (EOF), just return
+		if( XDR_TESTBIT( status , xdrstream::XDR_EOF ) )
+			return xdrstream::XDR_SUCCESS;
+
+		// unknown record ?
+		if( XDR_TESTBIT( status , xdrstream::XDR_RECORD_NOT_FOUND ) )
+			return xdrstream::XDR_SUCCESS;
+
+		// return in case of error
+		if( ! XDR_TESTBIT( status , xdrstream::XDR_SUCCESS ) )
+			return status;
+
+		// event header !!
+		if( pDummyRecord->getName() == "EventHeaderRecord" )
+		{
+			// need to set up the blocks to prepare for reading
+			XDR_STREAM( this->setUpBlocks() )
+
+			pDummyRecord = NULL;
+			XDR_STREAM( m_pXdrStream->readRecord( pDummyRecord , pDevice ) )
+
+			// necessary check ?
+			if( pDummyRecord->getName() != "EventRecord" )
+				return xdrstream::XDR_IO_ERROR;
+
+			for( std::set<IO::LCEventListener *>::iterator iter = m_eventListeners.begin(), endIter = m_eventListeners.end() ;
+					endIter != iter ; ++iter)
+			{
+				m_pXdrLCEvent->setAccessMode( EVENT::LCIO::UPDATE );
+				(*iter)->modifyEvent( m_pXdrLCEvent );
+
+				m_pXdrLCEvent->setAccessMode( EVENT::LCIO::READ_ONLY );
+				(*iter)->processEvent( m_pXdrLCEvent );
+			}
+
+			nReadEvents ++;
+		}
+		// a run header !
+		else if( pDummyRecord->getName() == "RunHeaderRecord" )
+		{
+			for( std::set<IO::LCRunListener *>::iterator iter = m_runListeners.begin(), endIter = m_runListeners.end() ;
+					endIter != iter ; ++iter)
+			{
+				m_pXdrLCRunHeader->setReadOnly( false );
+				(*iter)->modifyRunHeader( m_pXdrLCRunHeader );
+
+				m_pXdrLCRunHeader->setReadOnly( true );
+				(*iter)->processRunHeader( m_pXdrLCRunHeader );
+			}
+		}
+
+		if( nMaxEvents != 0 && nReadEvents == nMaxEvents )
+			break;
+	}
+
+	return xdrstream::XDR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+void XdrLcio::addLCEventListener(IO::LCEventListener *pListener)
+{
+	if( pListener )
+		m_eventListeners.insert( pListener );
+}
+
+//----------------------------------------------------------------------------------------------------
+
+void XdrLcio::removeLCEventListener(IO::LCEventListener *pListener)
+{
+	if( pListener )
+		m_eventListeners.erase( pListener );
+}
+
+//----------------------------------------------------------------------------------------------------
+
+void XdrLcio::addLCRunListener(IO::LCRunListener *pListener)
+{
+	if( pListener )
+		m_runListeners.insert( pListener );
+}
+
+//----------------------------------------------------------------------------------------------------
+
+void XdrLcio::removeLCRunListener(IO::LCRunListener *pListener)
+{
+	if( pListener )
+		m_runListeners.erase( pListener );
+}
+
+//----------------------------------------------------------------------------------------------------
+
+xdrstream::XdrStream *XdrLcio::getXdrStream() const
+{
+	return m_pXdrStream;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+xdrstream::XdrStream *XdrLcio::createBaseXdrStream()
+{
+	xdrstream::XdrStream *pXdrStream = new xdrstream::XdrStream();
+
+	pXdrStream->createRecord("RunHeaderRecord");
+	pXdrStream->createRecord("EventHeaderRecord");
+	pXdrStream->createRecord("EventRecord");
+
+	return pXdrStream;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+EVENT::LCEvent *XdrLcio::getLCEvent() const
+{
+	return m_pXdrLCEvent;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+EVENT::LCEvent *XdrLcio::takeLCEvent()
+{
+	EVENT::LCEvent *pLCEvent = m_pXdrLCEvent;
+	m_pXdrLCEvent = 0;
+	return pLCEvent;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+xdrstream::Status XdrLcio::setUpBlocks(const EVENT::LCEvent * pLCEvent)
+{
+	xdrstream::Record *pEventHeaderRecord = m_pXdrStream->getRecord("EventHeaderRecord");
+	pEventHeaderRecord->connectBlock( m_pLCEventHeaderBlock->getName() );
+
+	xdrstream::Record *pEventRecord = m_pXdrStream->getRecord("EventRecord");
+	pEventRecord->disconnectAllBlocks();
+
+	const std::vector<std::string> *pCollectionNames = pLCEvent->getCollectionNames();
+
+	for(uint32_t i=0 ; i<pCollectionNames->size() ; i++)
+	{
+		EVENT::LCCollection *pLCCollection = pLCEvent->getCollection( pCollectionNames->at(i) );
+		LCCollectionBlock *pCollectionBlock = dynamic_cast<LCCollectionBlock *>( m_pXdrStream->getBlock( pCollectionNames->at(i) ) );
+
+		// if the collection is transient, just ignore it
+		if( pLCCollection->isTransient() )
+			continue;
+
+		// get the lc object handler
+		LCObjectHandler *pLCObjectHandler = m_pLCObjectHandlerMgr->getHandler( pLCCollection->getTypeName() );
+
+		// unsupported type ?
+		if( ! pLCObjectHandler )
+			continue;
+
+		// create the block is not existing
+		if( ! pCollectionBlock )
+			pCollectionBlock = new LCCollectionBlock( m_pXdrStream , pCollectionNames->at(i)
+					, pLCCollection->getTypeName() , pLCObjectHandler );
+
+		// connect block and set collection
+		XDR_STREAM( pEventRecord->connectBlock( pCollectionBlock->getName() ) )
+		pCollectionBlock->setCollection( pLCCollection );
+	}
+
+	return xdrstream::XDR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------------------------------
+
+xdrstream::Status XdrLcio::setUpBlocks()
+{
+	xdrstream::Record *pEventRecord = m_pXdrStream->getRecord("EventRecord");
+
+	const std::vector<std::string> *pCollectionNames = m_pXdrLCEvent->getCollectionNames();
+
+	for(uint32_t i=0 ; i<pCollectionNames->size() ; i++)
+	{
+		EVENT::LCCollection *pLCCollection = m_pXdrLCEvent->getCollection( pCollectionNames->at(i) );
+		LCCollectionBlock *pCollectionBlock = dynamic_cast<LCCollectionBlock *>( m_pXdrStream->getBlock( pCollectionNames->at(i) ) );
+
+		// if the collection is transient, just ignore it
+		if( pLCCollection->isTransient() )
+			continue;
+
+		// get the lc object handler
+		LCObjectHandler *pLCObjectHandler = m_pLCObjectHandlerMgr->getHandler( pLCCollection->getTypeName() );
+
+		// unsupported type ?
+		if( ! pLCObjectHandler )
+			continue;
+
+		// create the block is not existing
+		if( ! pCollectionBlock )
+			pCollectionBlock = new LCCollectionBlock( m_pXdrStream , pCollectionNames->at(i)
+					, pLCCollection->getTypeName() , pLCObjectHandler );
+
+		// connect block and set collection
+		XDR_STREAM( pEventRecord->connectBlock( pCollectionBlock->getName() ) )
+		pCollectionBlock->setEventPtr( & m_pXdrLCEvent );
+	}
+
+	return xdrstream::XDR_SUCCESS;
+}
 
 } 
 
