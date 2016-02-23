@@ -37,6 +37,7 @@
 #include "xdrlcio/LCGenericObjectHandler.h"
 #include "xdrlcio/LCRelationHandler.h"
 #include "xdrlcio/MCParticleHandler.h"
+#include "xdrlcio/RecParticleHandler.h"
 
 // -- lcio headers
 #include "EVENT/LCIO.h"
@@ -55,6 +56,7 @@ LCObjectHandlerMgr::LCObjectHandlerMgr()
 	m_objectHandlerMap[EVENT::LCIO::LCGENERICOBJECT] = new LCGenericObjectHandler();
 	m_objectHandlerMap[EVENT::LCIO::LCRELATION] = new LCRelationHandler();
 	m_objectHandlerMap[EVENT::LCIO::MCPARTICLE] = new MCParticleHandler();
+	m_objectHandlerMap[EVENT::LCIO::RECONSTRUCTEDPARTICLE] = new RecParticleHandler();
 }
 
 //----------------------------------------------------------------------------------------------------
