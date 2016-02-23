@@ -32,6 +32,7 @@
 // -- xdrlcio handler headers
 #include "xdrlcio/ClusterHandler.h"
 #include "xdrlcio/CaloHitHandler.h"
+#include "xdrlcio/RawCaloHitHandler.h"
 #include "xdrlcio/LCStlVecHandler.h"
 #include "xdrlcio/LCGenericObjectHandler.h"
 #include "xdrlcio/LCRelationHandler.h"
@@ -47,6 +48,7 @@ LCObjectHandlerMgr::LCObjectHandlerMgr()
 {
 	m_objectHandlerMap[EVENT::LCIO::CLUSTER] = new ClusterHandler();
 	m_objectHandlerMap[EVENT::LCIO::CALORIMETERHIT] = new CaloHitHandler();
+	m_objectHandlerMap[EVENT::LCIO::RAWCALORIMETERHIT] = new RawCaloHitHandler();
 	m_objectHandlerMap[EVENT::LCIO::LCFLOATVEC] = new LCFloatVecHandler();
 	m_objectHandlerMap[EVENT::LCIO::LCINTVEC] = new LCIntVecHandler();
 	m_objectHandlerMap[EVENT::LCIO::LCSTRVEC] = new LCStrVecHandler();
