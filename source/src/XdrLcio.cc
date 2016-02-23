@@ -29,6 +29,7 @@
 #include "xdrlcio/XdrLcio.h"
 
 #include "xdrlcio/LCCollectionBlock.h"
+#include "xdrlcio/MCParticleHandler.h"
 
 namespace xdrlcio
 {
@@ -122,6 +123,8 @@ xdrstream::Status XdrLcio::readNextEvent( xdrstream::IODevice *const pDevice )
 	// necessary check ?
 	if( pDummyRecord->getName() != "EventRecord" )
 		return xdrstream::XDR_IO_ERROR;
+
+	XDR_STREAM( MCParticleHandler::restoreDaughterParentRelationShip( m_pXdrLCEvent ) );
 
 	return xdrstream::XDR_SUCCESS;
 }
@@ -217,6 +220,8 @@ xdrstream::Status XdrLcio::readDevice( xdrstream::IODevice *const pDevice , unsi
 			// necessary check ?
 			if( pDummyRecord->getName() != "EventRecord" )
 				return xdrstream::XDR_IO_ERROR;
+
+			XDR_STREAM( MCParticleHandler::restoreDaughterParentRelationShip( m_pXdrLCEvent ) );
 
 			for( std::set<IO::LCEventListener *>::iterator iter = m_eventListeners.begin(), endIter = m_eventListeners.end() ;
 					endIter != iter ; ++iter)

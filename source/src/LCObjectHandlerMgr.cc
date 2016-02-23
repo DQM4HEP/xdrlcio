@@ -35,6 +35,7 @@
 #include "xdrlcio/LCStlVecHandler.h"
 #include "xdrlcio/LCGenericObjectHandler.h"
 #include "xdrlcio/LCRelationHandler.h"
+#include "xdrlcio/MCParticleHandler.h"
 
 // -- lcio headers
 #include "EVENT/LCIO.h"
@@ -51,6 +52,7 @@ LCObjectHandlerMgr::LCObjectHandlerMgr()
 	m_objectHandlerMap[EVENT::LCIO::LCSTRVEC] = new LCStrVecHandler();
 	m_objectHandlerMap[EVENT::LCIO::LCGENERICOBJECT] = new LCGenericObjectHandler();
 	m_objectHandlerMap[EVENT::LCIO::LCRELATION] = new LCRelationHandler();
+	m_objectHandlerMap[EVENT::LCIO::MCPARTICLE] = new MCParticleHandler();
 }
 
 //----------------------------------------------------------------------------------------------------
