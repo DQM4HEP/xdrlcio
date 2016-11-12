@@ -1,0 +1,43 @@
+language: cpp
+
+sudo: not required
+
+compilers:
+  - gcc
+  - clang
+
+os:
+  - linux
+  - osx
+        
+script:
+  - mkdir build
+  - cd build  
+  - cmake -Dxdrstream_DIR=$xdrstream_DIR ..
+  - make install
+
+matrix:
+  include:
+    - os: osx
+      compiler: gcc
+    - os: linux
+      compiler: clang
+
+before_script:
+  - git clone https://github.com/rete/xdrstream.git
+  - cd xdrstream
+  - mkdir build
+  - cd build
+  - cmake ..
+  - make install
+  - cd ../../
+  - export xdrstream_DIR=$PWD/xdrstream
+  - git clone https://github.com/ILCSoft/LCIO.git
+  - cd LCIO
+  - mkdir -p build
+  - cd build
+  - cmake ..
+  - make install
+  - cd ../../
+  - export LCIO_DIR=$PWD/LCIO
+  
