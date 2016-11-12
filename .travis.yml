@@ -32,7 +32,7 @@ before_script:
   - make install
   - cd ../../
   - export xdrstream_DIR=$PWD/xdrstream
-  - git clone https://github.com/ILCSoft/LCIO.git
+  - svn co svn://svn.freehep.org/lcio/tags/v02-05 LCIO
   - cd LCIO
   - mkdir -p build
   - cd build
