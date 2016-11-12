@@ -64,6 +64,7 @@ xdrstream::Status TrackerDataHandler::read(xdrstream::IODevice *pDevice, EVENT::
 	pTrackerData->_charge.resize( ncharge );
 	XDR_STREAM( pDevice->readStaticArray( &pTrackerData->_charge[0] , ncharge ) )
 
+        XDR_STREAM( pDevice->readPointerTag( (void*)pTrackerData ) )
    
 	return xdrstream::XDR_SUCCESS;
 }
@@ -93,9 +94,7 @@ xdrstream::Status TrackerDataHandler::write(xdrstream::IODevice *pDevice, const 
         XDR_STREAM( pDevice->write( &ncharge ) )
 	XDR_STREAM( pDevice->writeArray( &charge[0] , ncharge ) )
 
-
-
-	// XDR_STREAM( pDevice->writePointerTag( pTrackerData ) )
+	XDR_STREAM( pDevice->writePointerTag( (void*)pTrackerData ) )
 
 	return xdrstream::XDR_SUCCESS;
 }
